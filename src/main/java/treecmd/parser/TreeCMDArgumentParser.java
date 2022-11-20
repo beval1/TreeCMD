@@ -2,33 +2,17 @@ package treecmd.parser;
 
 import treecmd.commands.*;
 
+import java.io.File;
 import java.lang.reflect.InvocationTargetException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class TreeCMDArgumentParser implements ArgumentParser {
-    public static final List<TreeCMDArgument> argClasses = List.of(
-            new PatternExclusive(),
-            new PatternInclusive(),
-            new RecursiveLevel(),
-            new DirectoryPath(),
-            new GitIgnore(),
-            new FileSizeBytes(),
-            new FileSizeBytesCompact(),
-            new OutputFile()
-    );
-
     @Override
     public Map<String, TreeCMDArgument> parse(String[] args) throws NoSuchMethodException, InvocationTargetException, InstantiationException, IllegalAccessException, ClassNotFoundException {
         HashMap<String, TreeCMDArgument> arguments = new HashMap<>();
         int argCounter = 0;
         while(argCounter < args.length) {
-//            List<TreeCMDArgument> argClasses = new ArrayList<>();
-//            TreeCMDArgument.instantiatedDerivedTypes.forEach(c -> {
-//                TreeCMDArgument arg = TreeCMDArgument.class.cast(c);
-//                argClasses.add(arg);
-//            });
+            List<TreeCMDArgument> argClasses = getArgClasses();
             boolean isValid = false;
             for (TreeCMDArgument cmdClass : argClasses) {
                 if (cmdClass.getFlag().equals(args[argCounter])) {
@@ -59,6 +43,19 @@ public class TreeCMDArgumentParser implements ArgumentParser {
             }
         }
         return arguments;
+    }
+
+    private List<TreeCMDArgument> getArgClasses() throws ClassNotFoundException, NoSuchMethodException, InvocationTargetException, InstantiationException, IllegalAccessException {
+        List<TreeCMDArgument> argClasses = new ArrayList<>();
+        File[] files = Objects.requireNonNull(new File("src/main/java/treecmd/commands").listFiles());
+        for (File file : files){
+            String filename = file.getName().replace(".java", "");
+            Class cmdClass = Class.forName("treecmd.commands." + filename);
+            if (!filename.equals("TreeCMDArgument")){
+                argClasses.add((TreeCMDArgument) cmdClass.getConstructor().newInstance());
+            }
+        }
+        return argClasses;
     }
 
     private void isValidArgument(TreeCMDArgument cmdClass, String value) {
